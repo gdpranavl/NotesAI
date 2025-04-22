@@ -5,18 +5,21 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { supabase } from '@/lib/supabase';
+import type { User as SupabaseUser } from '@supabase/auth-js';
 import { toast } from 'sonner';
 
 export default function Header() {
   const router = useRouter();
 
   const [isLoading, setIsLoading] = useState(false);
-  const [user, setUser] = useState<any>(null);
+  
+  const [user, setUser] = useState<SupabaseUser | null>(null);
+  
 
   useEffect(() => {
     const getUser = async () => {
       const { data } = await supabase.auth.getUser();
-      setUser(data.user);
+      setUser(data.user ?? null);
     };
 
     getUser();
@@ -24,7 +27,7 @@ export default function Header() {
     const { data: authListener } = supabase.auth.onAuthStateChange(
       (event, session) => {
         if (event === 'SIGNED_IN') {
-          setUser(session?.user);
+          setUser(session?.user ?? null);
         } else if (event === 'SIGNED_OUT') {
           setUser(null);
         }
