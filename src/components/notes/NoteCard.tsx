@@ -1,4 +1,3 @@
-// src/components/notes/NoteCard.tsx
 'use client';
 
 import { useState } from 'react';
@@ -33,17 +32,16 @@ export default function NoteCard({ note, onEdit }: NoteCardProps) {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['notes'] });
-      toast.success('Note deleted', { description: 'Your note has been deleted successfully.' });
+      toast.success('Note deleted successfully');
     },
     onError: (error) => {
       console.error('Error deleting note:', error);
-      toast.error('Delete failed', { description: 'Failed to delete the note. Please try again.' });
+      toast.error('Failed to delete the note. Please try again.');
     },
   });
 
   const summarizeMutation = useMutation({
-    mutationFn: async (noteId: string) => {
-      setIsSummarizing(true);
+    mutationFn: async () => {
       const response = await fetch('/api/summarize', {
         method: 'POST',
         headers: {
@@ -64,20 +62,20 @@ export default function NoteCard({ note, onEdit }: NoteCardProps) {
           summary: data.summary,
           updated_at: new Date().toISOString(),
         })
-        .eq('id', noteId);
+        .eq('id', note.id);
       
       if (error) throw error;
       
-      return { ...note, summary: data.summary };
+      return data.summary;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['notes'] });
-      toast.success('Note summarized', { description: 'Your note has been summarized with Gemini AI.' });
+      toast.success('Note summarized with Gemini AI');
       setIsSummarizing(false);
     },
     onError: (error) => {
       console.error('Error summarizing note:', error);
-      toast.error('Summarization failed', { description: 'Failed to summarize the note. Please try again.' });
+      toast.error('Failed to summarize the note. Please try again.');
       setIsSummarizing(false);
     },
   });
@@ -89,7 +87,8 @@ export default function NoteCard({ note, onEdit }: NoteCardProps) {
   };
 
   const handleSummarize = () => {
-    summarizeMutation.mutate(note.id);
+    setIsSummarizing(true);
+    summarizeMutation.mutate();
   };
 
   return (
