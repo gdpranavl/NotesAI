@@ -31,12 +31,8 @@ A mini AI-powered notes application built with Next.js, TypeScript, TailwindCSS,
 git clone https://github.com/yourusername/ai-notes-app.git
 cd ai-notes-app
 
-text
-
 2. Install dependencies
 npm install
-
-text
 
 3. Create a `.env.local` file in the root directory with the following variables:
 NEXT_PUBLIC_SUPABASE_URL=your-supabase-url
