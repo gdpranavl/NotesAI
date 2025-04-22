@@ -11,10 +11,10 @@ A mini AI-powered notes application built with Next.js, TypeScript, TailwindCSS,
 
 ## Technology Stack
 
-- **Frontend**: Next.js, TypeScript, TailwindCSS, Shadcn UI
+- **Frontend**: Next.js, TypeScript, TailwindCSS, Shadcn
 - **Backend**: Supabase (Authentication, Database)
 - **State Management**: React Query
-- **AI Integration**: DeepSeek API
+- **AI Integration**: Gemini API
 
 ## Getting Started
 
@@ -23,13 +23,13 @@ A mini AI-powered notes application built with Next.js, TypeScript, TailwindCSS,
 - Node.js (v22.14.0+)
 - npm (v10.9.2+)
 - Supabase account
-- DeepSeek API key (or alternative)
+- Gemini API key
 
 ### Installation
 
 1. Clone the repository
-git clone https://github.com/yourusername/ai-notes-app.git
-cd ai-notes-app
+git clone https://github.com/gdpranavl/NotesAI
+cd NotesAI
 
 2. Install dependencies
 npm install
@@ -37,4 +37,5 @@ npm install
 3. Create a `.env.local` file in the root directory with the following variables:
 NEXT_PUBLIC_SUPABASE_URL=your-supabase-url
 NEXT_PUBLIC_SUPABASE_ANON_KEY=your-supabase-anon-key
+GEMINI_API_KEY=your-gemini-api-key
 
