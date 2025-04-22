@@ -1,3 +1,4 @@
+// src/components/notes/SummarizeButton.tsx
 import { Button } from '@/components/ui/button';
 
 type SummarizeButtonProps = {
@@ -12,6 +13,7 @@ export default function SummarizeButton({ onClick, isLoading }: SummarizeButtonP
       type="button" 
       onClick={onClick} 
       disabled={isLoading}
+      className="flex items-center gap-1"
     >
       {isLoading ? 'Summarizing...' : 'AI Summarize'}
     </Button>

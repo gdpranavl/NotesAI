@@ -1,3 +1,4 @@
+// src/components/notes/NoteEditor.tsx
 'use client';
 
 import { useState } from 'react';
@@ -71,12 +72,12 @@ export default function NoteEditor({ note, isOpen, onClose }: NoteEditorProps) {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['notes'] });
-      toast('Note created. Your note has been created successfully.');
+      toast.success('Note created', { description: 'Your note has been created successfully.' });
       onClose();
     },
     onError: (error) => {
       console.error('Error creating note:', error);
-      toast('Create failed. Failed to create the note. Please try again.');
+      toast.error('Create failed', { description: 'Failed to create the note. Please try again.' });
     },
   });
 
@@ -100,27 +101,21 @@ export default function NoteEditor({ note, isOpen, onClose }: NoteEditorProps) {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['notes'] });
-      toast('Note updated. Your note has been updated successfully.');
+      toast.success('Note updated', { description: 'Your note has been updated successfully.' });
       onClose();
     },
     onError: (error) => {
       console.error('Error updating note:', error);
-      toast('Update failed. Failed to update the note. Please try again.');
+      toast.error('Update failed', { description: 'Failed to update the note. Please try again.' });
     },
   });
 
-  const onSubmit = (data: z.infer<typeof noteSchema>) => {
-    if (isEditing) {
-      updateNoteMutation.mutate(data);
-    } else {
-      createNoteMutation.mutate(data);
-    }
-  };
-
-  const handleSummarize = async () => {
-    try {
-      setIsSummarizing(true);
+  const summarizeMutation = useMutation({
+    mutationFn: async () => {
+      if (!note) throw new Error('Note not found');
+      
       const content = form.getValues('content');
+      setIsSummarizing(true);
       
       const response = await fetch('/api/summarize', {
         method: 'POST',
@@ -136,28 +131,40 @@ export default function NoteEditor({ note, isOpen, onClose }: NoteEditorProps) {
       
       const data = await response.json();
       
-      if (note?.id) {
-        // Update the note with the summary
-        const { error } = await supabase
-          .from('notes')
-          .update({
-            summary: data.summary,
-            updated_at: new Date().toISOString(),
-          })
-          .eq('id', note.id);
-        
-        if (error) throw error;
-        
-        queryClient.invalidateQueries({ queryKey: ['notes'] });
-        toast('Note summarized successfully.');
-        onClose();
-      }
-    } catch (error) {
-      console.error('Error summarizing note:', error);
-      toast('Failed to summarize note. Please try again.');
-    } finally {
+      const { error } = await supabase
+        .from('notes')
+        .update({
+          summary: data.summary,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', note.id);
+      
+      if (error) throw error;
+      
+      return data.summary;
+    },
+    onSuccess: (summary) => {
+      queryClient.invalidateQueries({ queryKey: ['notes'] });
+      toast.success('Note summarized', { description: 'Your note has been summarized with Gemini AI.' });
       setIsSummarizing(false);
+    },
+    onError: (error) => {
+      console.error('Error summarizing note:', error);
+      toast.error('Summarization failed', { description: 'Failed to summarize note. Please try again.' });
+      setIsSummarizing(false);
+    },
+  });
+
+  const onSubmit = (data: z.infer<typeof noteSchema>) => {
+    if (isEditing) {
+      updateNoteMutation.mutate(data);
+    } else {
+      createNoteMutation.mutate(data);
     }
+  };
+
+  const handleSummarize = () => {
+    summarizeMutation.mutate();
   };
 
   return (
@@ -198,27 +205,45 @@ export default function NoteEditor({ note, isOpen, onClose }: NoteEditorProps) {
                 </FormItem>
               )}
             />
+            
+            {isEditing && (
+              <div className="space-y-2">
+                <div className="flex justify-between items-center">
+                  <FormLabel>AI Summary</FormLabel>
+                  {!note?.summary && (
+                    <SummarizeButton 
+                      onClick={handleSummarize} 
+                      isLoading={isSummarizing || summarizeMutation.isPending} 
+                    />
+                  )}
+                </div>
+                <div className="p-3 bg-gray-50 rounded-md min-h-[100px]">
+                  {note?.summary ? (
+                    <p className="text-sm text-gray-700">{note.summary}</p>
+                  ) : (
+                    <p className="text-sm text-gray-500 italic">
+                      {summarizeMutation.isPending || isSummarizing 
+                        ? 'Generating summary with Gemini 2.5 Flash...' 
+                        : 'No summary available. Click the "AI Summarize" button to generate one.'}
+                    </p>
+                  )}
+                </div>
+              </div>
+            )}
+            
             <div className="flex justify-between pt-4">
               <Button variant="outline" type="button" onClick={onClose}>
                 Cancel
               </Button>
-              <div className="flex gap-2">
-                {isEditing && (
-                  <SummarizeButton 
-                    onClick={handleSummarize} 
-                    isLoading={isSummarizing} 
-                  />
-                )}
-                <Button 
-                  type="submit" 
-                  disabled={createNoteMutation.isPending || updateNoteMutation.isPending}
-                >
-                  {isEditing 
-                    ? (updateNoteMutation.isPending ? 'Saving...' : 'Save')
-                    : (createNoteMutation.isPending ? 'Creating...' : 'Create')
-                  }
-                </Button>
-              </div>
+              <Button 
+                type="submit" 
+                disabled={createNoteMutation.isPending || updateNoteMutation.isPending}
+              >
+                {isEditing 
+                  ? (updateNoteMutation.isPending ? 'Saving...' : 'Save')
+                  : (createNoteMutation.isPending ? 'Creating...' : 'Create')
+                }
+              </Button>
             </div>
           </form>
         </Form>

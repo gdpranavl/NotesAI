@@ -1,3 +1,4 @@
+// src/components/notes/NoteCard.tsx
 'use client';
 
 import { useState } from 'react';
@@ -8,6 +9,7 @@ import { formatDate } from '@/lib/utils';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { toast } from 'sonner';
+import SummarizeButton from './SummarizeButton';
 
 type NoteCardProps = {
   note: Note;
@@ -17,6 +19,7 @@ type NoteCardProps = {
 export default function NoteCard({ note, onEdit }: NoteCardProps) {
   const queryClient = useQueryClient();
   const [isExpanded, setIsExpanded] = useState(false);
+  const [isSummarizing, setIsSummarizing] = useState(false);
 
   const deleteMutation = useMutation({
     mutationFn: async (noteId: string) => {
@@ -30,11 +33,52 @@ export default function NoteCard({ note, onEdit }: NoteCardProps) {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['notes'] });
-      toast('Note deleted. Your note has been deleted successfully.');
+      toast.success('Note deleted', { description: 'Your note has been deleted successfully.' });
     },
     onError: (error) => {
       console.error('Error deleting note:', error);
-      toast('Delete failed. Failed to delete the note. Please try again.');
+      toast.error('Delete failed', { description: 'Failed to delete the note. Please try again.' });
+    },
+  });
+
+  const summarizeMutation = useMutation({
+    mutationFn: async (noteId: string) => {
+      setIsSummarizing(true);
+      const response = await fetch('/api/summarize', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ content: note.content }),
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to summarize note');
+      }
+      
+      const data = await response.json();
+      
+      const { error } = await supabase
+        .from('notes')
+        .update({
+          summary: data.summary,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', noteId);
+      
+      if (error) throw error;
+      
+      return { ...note, summary: data.summary };
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['notes'] });
+      toast.success('Note summarized', { description: 'Your note has been summarized with Gemini AI.' });
+      setIsSummarizing(false);
+    },
+    onError: (error) => {
+      console.error('Error summarizing note:', error);
+      toast.error('Summarization failed', { description: 'Failed to summarize the note. Please try again.' });
+      setIsSummarizing(false);
     },
   });
 
@@ -42,6 +86,10 @@ export default function NoteCard({ note, onEdit }: NoteCardProps) {
     if (window.confirm('Are you sure you want to delete this note?')) {
       deleteMutation.mutate(note.id);
     }
+  };
+
+  const handleSummarize = () => {
+    summarizeMutation.mutate(note.id);
   };
 
   return (
@@ -72,7 +120,15 @@ export default function NoteCard({ note, onEdit }: NoteCardProps) {
         )}
       </CardContent>
       <CardFooter className="flex justify-between pt-2">
-        <Button variant="outline" onClick={() => onEdit(note)}>Edit</Button>
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={() => onEdit(note)}>Edit</Button>
+          {!note.summary && (
+            <SummarizeButton 
+              onClick={handleSummarize} 
+              isLoading={isSummarizing || summarizeMutation.isPending} 
+            />
+          )}
+        </div>
         <Button variant="destructive" onClick={handleDelete} disabled={deleteMutation.isPending}>
           {deleteMutation.isPending ? 'Deleting...' : 'Delete'}
         </Button>
